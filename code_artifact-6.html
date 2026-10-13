@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>珍珠奶茶吸管組裝大冒險 - 國小數學課堂遊戲</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        boba: {
+                            tea: '#E8C39E',
+                            darkTea: '#C69363',
+                            teaGradientStart: '#f3d2b3',
+                            teaGradientEnd: '#b88252',
+                            pearl: '#1A0C08',
+                            pearlHighlight: '#4A2A18',
+                            glass: 'rgba(255, 255, 255, 0.75)',
+                            bg: '#FAF6ED'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'Fredoka', 'sans-serif'],
+                        fun: ['Fredoka', '"Noto Sans TC"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #FAF6ED;
+            background-image: radial-gradient(#E2D9C8 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+            font-family: 'Noto Sans TC', sans-serif;
+            user-select: none;
+        }
+
+        /* EXACT PHYSICAL PIXEL SCALE: 1cm = 12px */
+        .scale-ruler-container {
+            height: 380px; /* Ruler 0-30cm = 360px + margins */
+        }
+
+        .cup-container {
+            height: 300px; /* 25cm * 12px/cm = 300px */
+        }
+
+        /* Straw Gradient & Realistic 3D Styles */
+        .straw-piece {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .straw-piece:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .straw-white { background: linear-gradient(90deg, #f8fafc 0%, #ffffff 50%, #cbd5e1 100%); border: 2px solid #94a3b8; }
+        .straw-red   { background: linear-gradient(90deg, #dc2626 0%, #ef4444 50%, #991b1b 100%); border: 2px solid #7f1d1d; }
+        .straw-green { background: linear-gradient(90deg, #059669 0%, #10b981 50%, #047857 100%); border: 2px solid #064e3b; }
+        .straw-blue  { background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #1d4ed8 100%); border: 2px solid #1e3a8a; }
+
+        .straw-joint {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0,0,0,0.25),
+                rgba(0,0,0,0.25) 2px,
+                transparent 2px,
+                transparent 4px
+            );
+        }
+
+        /* Glassmorphism Boba Cup Outer Design */
+        .boba-glass-cup {
+            background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.45) 100%);
+            backdrop-filter: blur(6px);
+            border: 4px solid rgba(255, 255, 255, 0.9);
+            border-top: none;
+            box-shadow: 0 20px 35px rgba(180, 120, 90, 0.2), 
+                        inset -8px 0 15px rgba(255, 255, 255, 0.8),
+                        inset 8px 0 15px rgba(0, 0, 0, 0.05);
+            overflow: visible !important; /* CRITICAL: Allows top of straw to extend outside cup */
+            position: relative;
+        }
+
+        /* Sealing Film / Cup Rim Header */
+        .cup-rim {
+            position: absolute;
+            top: -12px;
+            left: -8px;
+            right: -8px;
+            height: 14px;
+            background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            z-index: 25;
+            border: 2px solid #ffffff;
+        }
+
+        .boba-liquid {
+            background: linear-gradient(180deg, #f0cfb0 0%, #ca9360 40%, #a46d3b 100%);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 276px; /* 23cm liquid height */
+            border-radius: 0 0 1.8rem 1.8rem;
+            overflow: hidden;
+            box-shadow: inset 0 10px 20px rgba(255,255,255,0.4);
+        }
+
+        /* Floating Ice Cubes */
+        .ice-cube {
+            background: rgba(255, 255, 255, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(2px);
+            border-radius: 6px;
+            position: absolute;
+            box-shadow: inset 0 0 6px rgba(255,255,255,0.9);
+        }
+
+        /* Q-Bounce Glossy Boba Pearl Design */
+        .boba-pearl-item {
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle at 35% 35%, #5a3825 0%, #1a0c08 60%, #000000 100%);
+            border-radius: 50%;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.8), 1px 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .boba-pearl-item::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 25%;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50%;
+            filter: blur(0.5px);
+        }
+
+        /* Pearl Rolling & Bouncing Animation */
+        @keyframes pearlsRollBounce {
+            0% { transform: translateY(0) rotate(0deg); }
+            20% { transform: translateY(-8px) scale(1.1) rotate(15deg); }
+            40% { transform: translateY(2px) scale(0.95) rotate(-10deg); }
+            60% { transform: translateY(-5px) scale(1.05) rotate(8deg); }
+            80% { transform: translateY(0) scale(1) rotate(-3deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+
+        .animate-pearls-roll {
+            animation: pearlsRollBounce 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+        }
+
+        /* Consecutive Travelling Pearls Climbing Up Straw */
+        @keyframes pearlClimbUp {
+            0% { transform: translateY(260px) scale(0.7); opacity: 0; }
+            10% { opacity: 1; transform: translateY(230px) scale(1); }
+            85% { opacity: 1; transform: translateY(-40px) scale(1); }
+            100% { transform: translateY(-65px) scale(0.3); opacity: 0; }
+        }
+
+        .climbing-pearl {
+            position: absolute;
+            bottom: 2px;
+            z-index: 45;
+            animation: pearlClimbUp 1.1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        /* General Keyframes */
+        @keyframes dropIn {
+            0% { transform: translateY(-30px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes sinkInCup {
+            0% { transform: translateY(-80px); }
+            70% { transform: translateY(8px); }
+            100% { transform: translateY(0); }
+        }
+
+        @keyframes characterCheer {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.12) rotate(-5deg); }
+            75% { transform: scale(1.12) rotate(5deg); }
+        }
+
+        @keyframes heartFloat {
+            0% { transform: translateY(0) scale(0.8); opacity: 1; }
+            100% { transform: translateY(-45px) scale(1.2); opacity: 0; }
+        }
+
+        .animate-drop { animation: dropIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.27); }
+        .animate-insert { animation: sinkInCup 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .animate-cheer { animation: characterCheer 0.5s infinite ease-in-out; }
+        .animate-heart { animation: heartFloat 1.2s ease-out infinite; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+    <header class="bg-amber-500 text-white shadow-md border-b-4 border-amber-600 px-4 py-3 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl animate-bounce">🧋</span>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black font-fun tracking-wide">珍珠奶茶吸管組裝大冒險</h1>
+                    <p class="text-xs text-amber-100">國小數學：第一支固定為白色吸管 (5cm)</p>
+                </div>
+            </div>
+            
+            <div class="bg-amber-600/90 backdrop-blur px-4 py-1.5 rounded-full border-2 border-amber-300 flex items-center gap-2 shadow-inner">
+                <i class="fa-solid fa-trophy text-yellow-300"></i>
+                <span class="text-xs sm:text-sm font-bold">過關關鍵：吸管總長度必須 <span class="text-yellow-300 font-extrabold text-base underline">＞ 27 公分</span></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto w-full p-3 sm:p-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT: Interactive Simulation Stage (7 cols) -->
+        <section class="lg:col-span-7 bg-white rounded-3xl p-5 shadow-lg border-2 border-amber-100 flex flex-col items-center min-h-[650px] relative">
+            
+            <!-- Dynamic Math Formula Header -->
+            <div class="w-full bg-slate-50 rounded-2xl p-3.5 border border-slate-200 mb-2 flex items-center justify-between gap-2 shadow-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg">長度加法算式</span>
+                    <div id="math-formula" class="text-base sm:text-lg font-black text-slate-700 font-fun">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+                <button onclick="resetStraws()" class="text-xs text-rose-500 hover:text-rose-700 font-bold px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 rounded-xl transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> 重置吸管
+                </button>
+            </div>
+
+            <!-- Lock Notice Ribbon -->
+            <div class="w-full bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5 mb-2 flex items-center justify-between text-xs text-amber-900 font-medium">
+                <span class="flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock text-amber-600"></i>
+                    <strong>規則提示：</strong> 第 1 支固定為 <span class="bg-white px-2 py-0.5 rounded border border-amber-300 font-bold text-slate-700">白色 (5cm)</span>
+                </span>
+                <span class="text-amber-700 text-[11px]">只需再選擇第 2 與第 3 支吸管</span>
+            </div>
+
+            <div class="w-full flex-grow flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12 relative py-4">
+                
+                <!-- Customer Character -->
+                <div class="flex flex-col items-center gap-2 z-20">
+                    <div id="customer-speech" class="bg-amber-100 border-2 border-amber-300 text-amber-950 text-xs font-extrabold px-3.5 py-2.5 rounded-2xl shadow-sm max-w-[170px] text-center relative">
+                        杯高 25cm，第一支為白色(5cm)，幫我接長至大於 27cm 吧！
+                        <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-amber-300"></div>
+                    </div>
+                    
+                    <div class="relative">
+                        <div id="customer-avatar" class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-amber-200 border-4 border-white shadow-md flex items-center justify-center text-5xl transition-all duration-300">
+                            😋
+                        </div>
+                        <div id="hearts-container" class="absolute inset-0 pointer-events-none hidden">
+                            <span class="absolute -top-2 left-2 text-rose-500 text-2xl animate-heart">❤️</span>
+                            <span class="absolute top-0 right-0 text-amber-500 text-xl animate-heart" style="animation-delay: 0.3s">✨</span>
+                            <span class="absolute -bottom-2 left-3 text-pink-500 text-xl animate-heart" style="animation-delay: 0.6s">💖</span>
+                        </div>
+                    </div>
+
+                    <span class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">珍奶顧客 小明</span>
+                </div>
+
+                <!-- Precision Scale Ruler + Aesthetic Boba Cup Stage -->
+                <div class="relative w-52 scale-ruler-container flex items-end justify-center">
+                    
+                    <!-- 1. Height Scale Ruler (0cm to 30cm = 360px height) -->
+                    <div class="absolute left-0 bottom-0 h-[360px] w-12 flex flex-col justify-between items-end pr-2 text-[10px] font-bold text-slate-400 border-r-2 border-slate-200">
+                        <div class="flex items-center gap-1 text-slate-600 font-extrabold">30cm</div>
+                        <div>25cm</div>
+                        <div>20cm</div>
+                        <div>15cm</div>
+                        <div>10cm</div>
+                        <div>5cm</div>
+                        <div class="text-slate-600 font-extrabold">0cm</div>
+                    </div>
+
+                    <!-- 2. Target Success Line > 27cm (324px height from bottom) -->
+                    <div class="absolute w-full border-b-2 border-dashed border-emerald-500 z-30 flex items-center justify-end pr-1" style="bottom: 324px;">
+                        <span class="text-[10px] bg-emerald-500 text-white font-extrabold px-1.5 py-0.5 rounded shadow">成功界線 ＞ 27cm</span>
+                    </div>
+
+                    <!-- 3. Cup Rim Height Line (25cm = 300px height from bottom) -->
+                    <div class="absolute w-full border-b-2 border-dashed border-amber-600/60 z-20 flex items-center justify-start pl-1" style="bottom: 300px;">
+                        <span class="text-[9px] bg-amber-100 text-amber-900 font-bold px-1 rounded border border-amber-300">杯高 25cm</span>
+                    </div>
+
+                    <!-- 4. Aesthetic Glass Boba Cup Container (Height 300px = 25cm) -->
+                    <div class="boba-glass-cup w-36 cup-container rounded-b-[2.5rem] relative flex flex-col justify-end items-center ml-8">
+                        
+                        <!-- Yellow Sealing Film Top Rim -->
+                        <div class="cup-rim"></div>
+
+                        <!-- Milk Tea Liquid Layer -->
+                        <div class="boba-liquid flex flex-col justify-between p-2">
+                            
+                            <!-- Floating Ice Cubes Layer -->
+                            <div class="w-full h-12 relative opacity-85 pointer-events-none">
+                                <div class="ice-cube w-5 h-5 top-1 left-2 rotate-12"></div>
+                                <div class="ice-cube w-6 h-6 top-2 right-3 -rotate-6"></div>
+                                <div class="ice-cube w-4 h-4 top-6 left-12 rotate-45"></div>
+                            </div>
+
+                            <!-- Bottom Rich Boba Pearls Array (Interactive & Bouncy) -->
+                            <div id="boba-bottom-bed" class="w-full h-14 pb-1 px-1 grid grid-cols-5 gap-1 justify-items-center items-end z-10">
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                                <div class="boba-pearl-item"></div>
+                            </div>
+                        </div>
+
+                        <!-- Straw Layer (Anchored at bottom = 0cm, extends upwards UNCLIPPED) -->
+                        <div id="straw-in-cup" class="absolute bottom-0 z-30 flex flex-col items-center w-6 transition-all duration-300">
+                            <!-- Injected dynamically by JS -->
+                        </div>
+
+                        <!-- Container for Climbing Pearls during Animation -->
+                        <div id="pearl-climb-container" class="absolute bottom-0 z-40 w-full h-full pointer-events-none flex justify-center"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Action Button -->
+            <div class="w-full mt-2 flex flex-col items-center gap-1.5">
+                <button id="test-btn" onclick="testStraw()" class="w-full sm:w-3/4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xl py-3.5 px-6 rounded-2xl shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-vial"></i> 放入杯中測試 (長度實測)
+                </button>
+                <p class="text-[11px] text-slate-400 font-medium">物理比例：1cm ＝ 12px，杯高 25cm，吸管必須頂端 ＞ 27cm 客人才能吸到！</p>
+            </div>
+
+        </section>
+
+        <!-- RIGHT: Straw Material Inventory & Classroom Checklist (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Straw Materials Selection Slot -->
+            <div class="bg-white rounded-3xl p-5 shadow-md border-2 border-amber-100">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-amber-500"></i> 吸管選擇區
+                    </h2>
+                    <span id="slot-counter" class="text-xs bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold">已選 1 / 3 支</span>
+                </div>
+
+                <!-- Current Straws Sequence Display Slot -->
+                <div class="bg-slate-50 border-2 border-dashed border-amber-300 rounded-2xl p-3 mb-4 flex items-center justify-around">
+                    <!-- Slot 1: Locked White Straw -->
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <i class="fa-solid fa-lock text-[9px]"></i> 第1支
+                        </span>
+                        <div class="w-12 h-6 straw-white rounded border border-slate-300 flex items-center justify-center text-xs font-black text-slate-700 shadow-sm">
+                            5cm
+                        </div>
+                    </div>
+
+                    <i class="fa-solid fa-plus text-slate-300 text-xs"></i>
+
+                    <!-- Slot 2 -->
+                    <div id="slot-2-display" class="flex flex-col items-center gap-1">
+                        <span class="text-[10px] font-bold text-slate-400">第2支</span>
+                        <div class="w-12 h-6 border-2 border-dashed border-slate-300 rounded flex items-center justify-center text-xs text-slate-300 font-bold">
+                            待選
+                        </div>
+                    </div>
+
+                    <i class="fa-solid fa-plus text-slate-300 text-xs"></i>
+
+                    <!-- Slot 3 -->
+                    <div id="slot-3-display" class="flex flex-col items-center gap-1">
+                        <span class="text-[10px] font-bold text-slate-400">第3支</span>
+                        <div class="w-12 h-6 border-2 border-dashed border-slate-300 rounded flex items-center justify-center text-xs text-slate-300 font-bold">
+                            待選
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selection Buttons -->
+                <p class="text-xs font-bold text-slate-600 mb-2">請選擇第 2 支與第 3 支吸管：</p>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <!-- Red Straw -->
+                    <button id="btn-add-red" onclick="addStraw('red')" class="straw-piece bg-slate-50 border-2 border-slate-200 rounded-2xl p-2.5 flex flex-col items-center gap-1.5 hover:border-amber-400 focus:outline-none">
+                        <div class="w-full h-6 straw-red rounded shadow-inner flex items-center justify-center">
+                            <span class="text-xs font-black text-white">7 cm</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700">紅色吸管</span>
+                    </button>
+
+                    <!-- Green Straw -->
+                    <button id="btn-add-green" onclick="addStraw('green')" class="straw-piece bg-slate-50 border-2 border-slate-200 rounded-2xl p-2.5 flex flex-col items-center gap-1.5 hover:border-amber-400 focus:outline-none">
+                        <div class="w-full h-6 straw-green rounded shadow-inner flex items-center justify-center">
+                            <span class="text-xs font-black text-white">9 cm</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700">綠色吸管</span>
+                    </button>
+
+                    <!-- Blue Straw -->
+                    <button id="btn-add-blue" onclick="addStraw('blue')" class="straw-piece bg-slate-50 border-2 border-slate-200 rounded-2xl p-2.5 flex flex-col items-center gap-1.5 hover:border-amber-400 focus:outline-none">
+                        <div class="w-full h-6 straw-blue rounded shadow-inner flex items-center justify-center">
+                            <span class="text-xs font-black text-white">14 cm</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700">藍色吸管</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Classroom Specified 3 Combinations -->
+            <div class="bg-amber-500/10 rounded-3xl p-5 border-2 border-amber-200/80">
+                <h3 class="font-bold text-amber-900 text-sm mb-1 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-amber-600"></i> 課堂指定三組嘗試任務：
+                </h3>
+                <p class="text-xs text-amber-800/80 mb-3">第一支皆為白色 (5cm)，點擊載入測試：</p>
+                
+                <div class="space-y-2.5">
+                    <!-- Combo 1 -->
+                    <div id="card-combo-1" class="bg-white p-3 rounded-2xl border-2 border-slate-200 flex items-center justify-between transition-all">
+                        <div class="flex items-center gap-2.5">
+                            <span id="badge-1" class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center">1</span>
+                            <div>
+                                <div class="text-xs font-bold text-slate-800">組合一：白 ＋ 紅 ＋ 綠</div>
+                                <div class="text-[11px] text-slate-500">5 + 7 + 9 = <span class="font-bold text-rose-600">21cm</span> (沉入25cm杯中)</div>
+                            </div>
+                        </div>
+                        <button onclick="loadCombo(['white','red','green'])" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl transition">
+                            載入組裝
+                        </button>
+                    </div>
+
+                    <!-- Combo 2 -->
+                    <div id="card-combo-2" class="bg-white p-3 rounded-2xl border-2 border-slate-200 flex items-center justify-between transition-all">
+                        <div class="flex items-center gap-2.5">
+                            <span id="badge-2" class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center">2</span>
+                            <div>
+                                <div class="text-xs font-bold text-slate-800">組合二：白 ＋ 紅 ＋ 藍</div>
+                                <div class="text-[11px] text-slate-500">5 + 7 + 14 = <span class="font-bold text-rose-600">26cm</span> (未達27cm界線)</div>
+                            </div>
+                        </div>
+                        <button onclick="loadCombo(['white','red','blue'])" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl transition">
+                            載入組裝
+                        </button>
+                    </div>
+
+                    <!-- Combo 3 -->
+                    <div id="card-combo-3" class="bg-white p-3 rounded-2xl border-2 border-slate-200 flex items-center justify-between transition-all">
+                        <div class="flex items-center gap-2.5">
+                            <span id="badge-3" class="w-6 h-6 rounded-full bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center">3</span>
+                            <div>
+                                <div class="text-xs font-bold text-slate-800">組合三：白 ＋ 綠 ＋ 藍</div>
+                                <div class="text-[11px] text-slate-500">5 + 9 + 14 = <span class="font-bold text-emerald-600">28cm</span> (＞27cm 成功)</div>
+                            </div>
+                        </div>
+                        <button onclick="loadCombo(['white','green','blue'])" class="text-xs bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-xl transition">
+                            載入組裝
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Classroom Summary Modal -->
+    <div id="summary-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-4 border-amber-400 transform transition-all animate-drop">
+            <div class="text-center mb-4">
+                <span class="text-5xl">🎉</span>
+                <h2 class="text-2xl font-black text-slate-800 mt-1 font-fun">課堂數學大告捷！</h2>
+                <p class="text-xs text-slate-500">第一支吸管固定為白色 (5cm) 時的加法對照表</p>
+            </div>
+
+            <div class="bg-amber-50 rounded-2xl p-4 border border-amber-200 mb-4 space-y-2">
+                <div class="text-xs font-bold text-amber-900 mb-2 border-b border-amber-200 pb-1 flex justify-between">
+                    <span>吸管組合與長度計算</span>
+                    <span>實測結果（杯高25cm）</span>
+                </div>
+                
+                <div class="flex justify-between items-center text-xs p-2 rounded bg-white shadow-sm">
+                    <span class="font-bold">1. 白(5) + 紅(7) + 綠(9) = 21cm</span>
+                    <span class="font-black text-rose-500">沉入杯中 (＜25cm) ❌</span>
+                </div>
+                <div class="flex justify-between items-center text-xs p-2 rounded bg-white shadow-sm">
+                    <span class="font-bold">2. 白(5) + 紅(7) + 藍(14) = 26cm</span>
+                    <span class="font-black text-rose-500">不夠長 (≤27cm) ❌</span>
+                </div>
+                <div class="flex justify-between items-center text-xs p-2 rounded bg-white shadow-sm">
+                    <span class="font-bold">3. 白(5) + 綠(9) + 藍(14) = 28cm</span>
+                    <span class="font-black text-emerald-600">露出口 (＞27cm) 🎉</span>
+                </div>
+            </div>
+
+            <div class="bg-emerald-50 text-emerald-900 rounded-2xl p-3.5 text-xs leading-relaxed mb-5 border border-emerald-200">
+                <i class="fa-solid fa-lightbulb text-amber-500 mr-1 text-sm"></i>
+                <strong>課堂數學思考重點：</strong><br>
+                第一支固定用 <strong>5cm 白色吸管</strong> 的條件下：<br>
+                加上 7cm 與 14cm 得到 26cm，雖然高於 25cm 杯口，但因為嘴巴吸飲料需要露在杯口上方至少 2cm（＞27cm），因此唯有搭配 <strong>9cm(綠) + 14cm(藍) = 28cm</strong> 才能成功！
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeSummaryModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">
+                    返回操作區
+                </button>
+                <button onclick="resetAllProgress()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-xs transition">
+                    重新開始課堂活動
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-slate-800 text-slate-400 text-center text-xs py-3 border-t border-slate-700">
+        <p>國小數學互動教具 - 珍珠奶茶吸管長度加法與比較大冒險</p>
+    </footer>
+
+    <script>
+        // SCALE SYSTEM: 1 cm = 12 pixels
+        const SCALE_PX = 12;
+
+        const STRAW_DATA = {
+            white: { name: '白色吸管', length: 5, colorClass: 'straw-white', textHex: '#475569' },
+            red:   { name: '紅色吸管', length: 7, colorClass: 'straw-red', textHex: '#ffffff' },
+            green: { name: '綠色吸管', length: 9, colorClass: 'straw-green', textHex: '#ffffff' },
+            blue:  { name: '藍色吸管', length: 14, colorClass: 'straw-blue', textHex: '#ffffff' }
+        };
+
+        // RULE: Straw #1 is ALWAYS LOCKED as 'white'
+        let currentStraws = ['white'];
+        let testedCombos = { '21': false, '26': false, '28': false };
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                if (type === 'add') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.08);
+                } else if (type === 'slurp') {
+                    for (let i = 0; i < 4; i++) {
+                        setTimeout(() => {
+                            const osc = audioCtx.createOscillator();
+                            const gain = audioCtx.createGain();
+                            osc.connect(gain);
+                            gain.connect(audioCtx.destination);
+                            osc.type = 'triangle';
+                            osc.frequency.setValueAtTime(300 + Math.random() * 200, audioCtx.currentTime);
+                            osc.frequency.exponentialRampToValueAtTime(700 + Math.random() * 200, audioCtx.currentTime + 0.15);
+                            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+                            osc.start();
+                            osc.stop(audioCtx.currentTime + 0.15);
+                        }, i * 220);
+                    }
+                } else if (type === 'win') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const noteOsc = audioCtx.createOscillator();
+                        const noteGain = audioCtx.createGain();
+                        noteOsc.connect(noteGain);
+                        noteGain.connect(audioCtx.destination);
+                        noteOsc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.09);
+                        noteGain.gain.setValueAtTime(0.18, audioCtx.currentTime + idx * 0.09);
+                        noteGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + idx * 0.09 + 0.18);
+                        noteOsc.start(audioCtx.currentTime + idx * 0.09);
+                        noteOsc.stop(audioCtx.currentTime + idx * 0.09 + 0.18);
+                    });
+                } else if (type === 'fail') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.35);
+                    gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                }
+            } catch (e) {}
+        }
+
+        function addStraw(type) {
+            if (currentStraws.length >= 3) {
+                showCustomerSpeech('已選擇了 3 根吸管囉！若要更改請點擊重置。', '🤔');
+                return;
+            }
+            currentStraws.push(type);
+            playSound('add');
+            renderWorkspace();
+        }
+
+        function resetStraws() {
+            // Always keep first straw as 'white'
+            currentStraws = ['white'];
+            renderWorkspace();
+            resetCustomerState();
+        }
+
+        function loadCombo(comboArray) {
+            // Make sure comboArray starts with 'white'
+            currentStraws = comboArray[0] === 'white' ? [...comboArray] : ['white', ...comboArray];
+            playSound('add');
+            renderWorkspace();
+            resetCustomerState();
+        }
+
+        function renderWorkspace() {
+            const mathFormulaEl = document.getElementById('math-formula');
+            const strawContainer = document.getElementById('straw-in-cup');
+            const slotCounter = document.getElementById('slot-counter');
+            const slot2El = document.getElementById('slot-2-display');
+            const slot3El = document.getElementById('slot-3-display');
+
+            strawContainer.classList.remove('animate-insert');
+
+            // Update Straw Selection Display Slots
+            slotCounter.innerText = `已選 ${currentStraws.length} / 3 支`;
+
+            // Slot 2 Display
+            if (currentStraws.length >= 2) {
+                const s2Data = STRAW_DATA[currentStraws[1]];
+                slot2El.innerHTML = `
+                    <span class="text-[10px] font-bold text-slate-600">第2支</span>
+                    <div class="w-12 h-6 ${s2Data.colorClass} rounded border flex items-center justify-center text-xs font-black" style="color:${s2Data.textHex}">
+                        ${s2Data.length}cm
+                    </div>
+                `;
+            } else {
+                slot2El.innerHTML = `
+                    <span class="text-[10px] font-bold text-slate-400">第2支</span>
+                    <div class="w-12 h-6 border-2 border-dashed border-slate-300 rounded flex items-center justify-center text-xs text-slate-300 font-bold">
+                        待選
+                    </div>
+                `;
+            }
+
+            // Slot 3 Display
+            if (currentStraws.length >= 3) {
+                const s3Data = STRAW_DATA[currentStraws[2]];
+                slot3El.innerHTML = `
+                    <span class="text-[10px] font-bold text-slate-600">第3支</span>
+                    <div class="w-12 h-6 ${s3Data.colorClass} rounded border flex items-center justify-center text-xs font-black" style="color:${s3Data.textHex}">
+                        ${s3Data.length}cm
+                    </div>
+                `;
+            } else {
+                slot3El.innerHTML = `
+                    <span class="text-[10px] font-bold text-slate-400">第3支</span>
+                    <div class="w-12 h-6 border-2 border-dashed border-slate-300 rounded flex items-center justify-center text-xs text-slate-300 font-bold">
+                        待選
+                    </div>
+                `;
+            }
+
+            // Calculate Math & Render in Cup
+            let totalLength = 0;
+            let formulaParts = [];
+            strawContainer.innerHTML = '';
+
+            currentStraws.forEach((strawKey, idx) => {
+                const data = STRAW_DATA[strawKey];
+                totalLength += data.length;
+                formulaParts.push(`${data.length}cm`);
+
+                const pxHeight = data.length * SCALE_PX;
+                
+                const pieceEl = document.createElement('div');
+                pieceEl.className = `w-5 ${data.colorClass} rounded-sm relative flex items-center justify-center animate-drop`;
+                pieceEl.style.height = `${pxHeight}px`;
+
+                pieceEl.innerHTML = `<span class="text-[10px] font-black" style="color:${data.textHex}">${data.length}</span>`;
+
+                if (idx < currentStraws.length - 1) {
+                    const jointEl = document.createElement('div');
+                    jointEl.className = 'absolute -top-1 z-30 w-6 h-2 bg-slate-700/30 straw-joint rounded-full border border-slate-800/40';
+                    pieceEl.appendChild(jointEl);
+                }
+
+                // Insert at top so first selected straw (white) stays at bottom of cup
+                strawContainer.insertBefore(pieceEl, strawContainer.firstChild);
+            });
+
+            const formulaStr = formulaParts.join(' + ');
+            let resultColor = totalLength > 27 ? 'text-emerald-600 font-black' : 'text-slate-700';
+            mathFormulaEl.innerHTML = `${formulaStr} = <span class="${resultColor} text-lg font-bold">${totalLength} 公分</span>`;
+        }
+
+        function testStraw() {
+            if (currentStraws.length < 3) {
+                showCustomerSpeech('請選滿 3 根吸管再來測試喔！', '🤔');
+                return;
+            }
+
+            const totalLength = currentStraws.reduce((sum, key) => sum + STRAW_DATA[key].length, 0);
+            const strawContainer = document.getElementById('straw-in-cup');
+            const customerAvatar = document.getElementById('customer-avatar');
+            const heartsContainer = document.getElementById('hearts-container');
+            const pearlBed = document.getElementById('boba-bottom-bed');
+            const climbContainer = document.getElementById('pearl-climb-container');
+
+            climbContainer.innerHTML = '';
+
+            strawContainer.classList.remove('animate-insert');
+            void strawContainer.offsetWidth;
+            strawContainer.classList.add('animate-insert');
+
+            if (totalLength > 27) {
+                // SUCCESS (組合三: 28cm > 27cm)
+                const pearls = pearlBed.querySelectorAll('.boba-pearl-item');
+                pearls.forEach(p => p.classList.add('animate-pearls-roll'));
+
+                playSound('slurp');
+
+                for (let i = 0; i < 4; i++) {
+                    setTimeout(() => {
+                        const pearl = document.createElement('div');
+                        pearl.className = 'boba-pearl-item climbing-pearl';
+                        climbContainer.appendChild(pearl);
+                        setTimeout(() => pearl.remove(), 1200);
+                    }, i * 220);
+                }
+
+                setTimeout(() => {
+                    playSound('win');
+                    customerAvatar.innerText = '😍';
+                    customerAvatar.classList.add('animate-cheer');
+                    heartsContainer.classList.remove('hidden');
+
+                    showCustomerSpeech(`太棒了！白(5) + 綠(9) + 藍(14) ＝ ${totalLength}cm (＞27cm)，順利吸到珍珠奶茶！`, '🤩');
+
+                    confetti({
+                        particleCount: 110,
+                        spread: 85,
+                        origin: { y: 0.6 }
+                    });
+                }, 400);
+
+                if (totalLength === 28) testedCombos['28'] = true;
+                updateChecklistBadges();
+
+                setTimeout(() => {
+                    customerAvatar.innerText = '😋';
+                    customerAvatar.classList.remove('animate-cheer');
+                    heartsContainer.classList.add('hidden');
+                    pearls.forEach(p => p.classList.remove('animate-pearls-roll'));
+                }, 3500);
+
+            } else {
+                // FAIL
+                playSound('fail');
+                customerAvatar.innerText = '😭';
+
+                if (totalLength <= 25) {
+                    showCustomerSpeech(`長度 ${totalLength}cm 比杯身(25cm)還矮，整個沉入飲料裡面了！`, '😢');
+                } else {
+                    showCustomerSpeech(`長度 ${totalLength}cm 雖然超出杯口一點點，但未達到 27cm 成功界線，客人吸不到！`, '😭');
+                }
+
+                if (totalLength === 21) testedCombos['21'] = true;
+                if (totalLength === 26) testedCombos['26'] = true;
+                updateChecklistBadges();
+            }
+
+            checkAllCompleted();
+        }
+
+        function showCustomerSpeech(text, emoji = '😋') {
+            const speechEl = document.getElementById('customer-speech');
+            const avatarEl = document.getElementById('customer-avatar');
+            speechEl.innerText = text;
+            avatarEl.innerText = emoji;
+        }
+
+        function resetCustomerState() {
+            showCustomerSpeech('杯高 25cm，第一支為白色(5cm)，幫我接長至大於 27cm 吧！', '😋');
+        }
+
+        function updateChecklistBadges() {
+            if (testedCombos['21']) {
+                document.getElementById('badge-1').innerHTML = '<i class="fa-solid fa-xmark text-rose-500"></i>';
+                document.getElementById('card-combo-1').classList.add('border-rose-300', 'bg-rose-50/50');
+            }
+            if (testedCombos['26']) {
+                document.getElementById('badge-2').innerHTML = '<i class="fa-solid fa-xmark text-rose-500"></i>';
+                document.getElementById('card-combo-2').classList.add('border-rose-300', 'bg-rose-50/50');
+            }
+            if (testedCombos['28']) {
+                document.getElementById('badge-3').innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i>';
+                document.getElementById('card-combo-3').classList.add('border-emerald-300', 'bg-emerald-50/50');
+            }
+        }
+
+        function checkAllCompleted() {
+            if (testedCombos['21'] && testedCombos['26'] && testedCombos['28']) {
+                setTimeout(() => {
+                    document.getElementById('summary-modal').classList.remove('hidden');
+                }, 2000);
+            }
+        }
+
+        function closeSummaryModal() {
+            document.getElementById('summary-modal').classList.add('hidden');
+        }
+
+        function resetAllProgress() {
+            testedCombos = { '21': false, '26': false, '28': false };
+            resetStraws();
+            closeSummaryModal();
+
+            ['1', '2', '3'].forEach(num => {
+                const badge = document.getElementById(`badge-${num}`);
+                const card = document.getElementById(`card-combo-${num}`);
+                badge.innerText = num;
+                card.className = 'bg-white p-3 rounded-2xl border-2 border-slate-200 flex items-center justify-between transition-all';
+            });
+        }
+
+        window.onload = function() {
+            renderWorkspace();
+        };
+    </script>
+</body>
+</html>
